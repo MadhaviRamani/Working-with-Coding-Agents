@@ -9,4 +9,6 @@ import { afterEach } from "vitest";
 
 afterEach(() => {
   cleanup();
+  // Every test starts from the sample books.
+  localStorage.clear();
 });

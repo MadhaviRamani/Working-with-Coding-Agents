@@ -1,12 +1,116 @@
 import { describe, expect, test } from "vitest";
 import {
+  addBook,
   averageRating,
   countRead,
   filterBooks,
+  parseBooks,
   removeBook,
   toggleRead,
 } from "./books";
+import type { NewBook } from "./books";
 import { initialBooks } from "./data";
+
+const draft: NewBook = {
+  title: "Emma",
+  author: "Jane Austen",
+  genre: "fantasy",
+  rating: 4,
+};
+
+describe("addBook", () => {
+  test("adds an unread book with trimmed title and author", () => {
+    const result = addBook(
+      initialBooks,
+      { ...draft, title: "  Emma ", author: " Jane Austen  " },
+      "new"
+    );
+    expect(result).toEqual({
+      ok: true,
+      books: [
+        ...initialBooks,
+        {
+          id: "new",
+          title: "Emma",
+          author: "Jane Austen",
+          genre: "fantasy",
+          rating: 4,
+          isRead: false,
+        },
+      ],
+    });
+  });
+
+  test("does not change the original list", () => {
+    const books = structuredClone(initialBooks);
+    addBook(books, draft, "new");
+    expect(books).toEqual(initialBooks);
+  });
+
+  test("rejects a missing title", () => {
+    expect(addBook(initialBooks, { ...draft, title: "   " }, "new")).toEqual({
+      ok: false,
+      error: "Title is required.",
+    });
+  });
+
+  test("rejects a missing author", () => {
+    expect(addBook(initialBooks, { ...draft, author: "" }, "new")).toEqual({
+      ok: false,
+      error: "Author is required.",
+    });
+  });
+
+  test("rejects the same title and author regardless of case and spaces", () => {
+    const result = addBook(
+      initialBooks,
+      { ...draft, title: " dune ", author: "FRANK HERBERT" },
+      "new"
+    );
+    expect(result).toEqual({
+      ok: false,
+      error: "This book is already on your shelf.",
+    });
+  });
+
+  test("accepts the same title by another author", () => {
+    const result = addBook(
+      initialBooks,
+      { ...draft, title: "Dune", author: "Someone Else" },
+      "new"
+    );
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("parseBooks", () => {
+  test("returns null when nothing is saved", () => {
+    expect(parseBooks(null)).toBeNull();
+  });
+
+  test("returns null for invalid JSON", () => {
+    expect(parseBooks("not json")).toBeNull();
+  });
+
+  test("returns null when the data is not a list", () => {
+    expect(parseBooks('{"a":1}')).toBeNull();
+  });
+
+  test("returns null when a book is not valid", () => {
+    const books = [{ ...initialBooks[0], genre: "romance" }];
+    expect(parseBooks(JSON.stringify(books))).toBeNull();
+    const rated = [{ ...initialBooks[0], rating: 6 }];
+    expect(parseBooks(JSON.stringify(rated))).toBeNull();
+  });
+
+  test("returns the saved books", () => {
+    expect(parseBooks(JSON.stringify(initialBooks))).toEqual(initialBooks);
+  });
+
+  test("accepts an empty shelf", () => {
+    expect(parseBooks("[]")).toEqual([]);
+  });
+});
 
 describe("filterBooks", () => {
   test("filters by genre", () => {
